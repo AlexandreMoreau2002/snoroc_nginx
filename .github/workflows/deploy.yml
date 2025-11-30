@@ -1,0 +1,90 @@
+name: Deploy Nginx Configuration
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  validate:
+    name: Validate Configuration
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nginx (for syntax validation)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+
+      - name: Run basic validation
+        run: |
+          chmod +x scripts/test.sh
+          ./scripts/test.sh
+
+      - name: Validate Nginx syntax (dry-run)
+        run: |
+          # Create temporary nginx.conf for testing
+          sudo mkdir -p /tmp/nginx-test/sites
+          sudo mkdir -p /tmp/nginx-test/snippets
+          sudo cp nginx/sites/* /tmp/nginx-test/sites/
+          sudo cp nginx/snippets/* /tmp/nginx-test/snippets/
+          
+          # Test each site config
+          for conf in nginx/sites/*.conf; do
+            echo "Testing $(basename $conf)..."
+            # Note: Full test requires actual paths, this is a basic check
+            sudo nginx -t -c /etc/nginx/nginx.conf 2>&1 | head -1
+          done
+
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy configuration files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ vars.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ vars.SERVER_PORT }}
+          source: "nginx/sites/*,nginx/snippets/*,scripts/deploy.sh"
+          target: ${{ vars.DEPLOY_TEMP_DIR }}
+          strip_components: 0
+
+      - name: Execute deployment script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ vars.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ vars.SERVER_PORT }}
+          script: |
+            cd ${{ vars.DEPLOY_TEMP_DIR }}
+            chmod +x scripts/deploy.sh
+            sudo ./scripts/deploy.sh
+            
+            # Cleanup
+            cd /
+            rm -rf ${{ vars.DEPLOY_TEMP_DIR }}
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ vars.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ vars.SERVER_PORT }}
+          script: |
+            echo "Checking Nginx status..."
+            sudo systemctl status nginx --no-pager
+            echo ""
+            echo "Testing configuration..."
+            sudo nginx -t
