@@ -43,6 +43,7 @@ jobs:
     name: Deploy to Server
     runs-on: ubuntu-latest
     needs: validate
+    environment: snoroc-nginx  # Utilise l'environnement GitHub
     
     steps:
       - name: Checkout repository
@@ -53,7 +54,7 @@ jobs:
         with:
           host: ${{ vars.SERVER_HOST }}
           username: ${{ vars.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ vars.SERVER_SSH_KEY }}
           port: ${{ vars.SERVER_PORT }}
           source: "nginx/sites/*,nginx/snippets/*,scripts/deploy.sh"
           target: ${{ vars.DEPLOY_TEMP_DIR }}
@@ -64,7 +65,7 @@ jobs:
         with:
           host: ${{ vars.SERVER_HOST }}
           username: ${{ vars.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ vars.SERVER_SSH_KEY }}
           port: ${{ vars.SERVER_PORT }}
           script: |
             cd ${{ vars.DEPLOY_TEMP_DIR }}
@@ -80,7 +81,7 @@ jobs:
         with:
           host: ${{ vars.SERVER_HOST }}
           username: ${{ vars.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ vars.SERVER_SSH_KEY }}
           port: ${{ vars.SERVER_PORT }}
           script: |
             echo "Checking Nginx status..."
@@ -88,3 +89,53 @@ jobs:
             echo ""
             echo "Testing configuration..."
             sudo nginx -t
+
+      - name: Health Check
+        run: |
+          echo "🔍 Vérification de la disponibilité du site..."
+          
+          # Attendre quelques secondes pour que Nginx soit complètement rechargé
+          sleep 5
+          
+          # Vérifier le code HTTP
+          STATUS_CODE=$(curl -o /dev/null -s -w "%{http_code}" https://${{ vars.SITE_URL }})
+          
+          if [ "$STATUS_CODE" != "200" ]; then
+            echo "❌ Le site répond avec un code HTTP $STATUS_CODE"
+            exit 1
+          fi
+          
+          echo "✅ Code HTTP 200 OK"
+          
+          # Vérifier le contenu de la page
+          echo "🌐 Vérification du contenu..."
+          CONTENT=$(curl -s https://${{ vars.SITE_URL }})
+          
+          # Détecter les erreurs Nginx courantes
+          if echo "$CONTENT" | grep -qi "nginx error"; then
+            echo "❌ Le site renvoie une page d'erreur Nginx"
+            exit 1
+          fi
+          
+          if echo "$CONTENT" | grep -qi "Bad Gateway"; then
+            echo "❌ Le site renvoie une erreur 502 Bad Gateway"
+            exit 1
+          fi
+          
+          if echo "$CONTENT" | grep -qi "Welcome to nginx"; then
+            echo "❌ Le site affiche la page par défaut de Nginx"
+            exit 1
+          fi
+          
+          if echo "$CONTENT" | grep -qi "403 Forbidden"; then
+            echo "❌ Le site renvoie une erreur 403 Forbidden"
+            exit 1
+          fi
+          
+          if echo "$CONTENT" | grep -qi "404 Not Found"; then
+            echo "❌ Le site renvoie une erreur 404 Not Found"
+            exit 1
+          fi
+          
+          echo "✅ Le site est UP et répond correctement"
+          echo "🎉 Déploiement validé avec succès !"
