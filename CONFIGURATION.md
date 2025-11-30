@@ -1,11 +1,10 @@
-# 🎯 Guide de configuration GitHub - Variables et Secrets
+# 🎯 Guide de configuration GitHub - Variables
 
 ## 📋 Résumé : Que configurer ?
 
 | Type | Où | Quoi | Visible dans les logs ? |
 |------|-----|------|------------------------|
 | **Variables** | Actions → Variables | Configuration non-sensible | ✅ Oui |
-| **Secrets** | Actions → Secrets | Données sensibles (clés SSH) | ❌ Non |
 
 ---
 
@@ -34,45 +33,9 @@
 │  SERVER_USER             ubuntu                             │
 │  SERVER_PORT             22                                 │
 │  DEPLOY_TEMP_DIR         /tmp/nginx-deploy                  │
+│  SERVER_SSH_KEY          <ssh_key>                          │
 └─────────────────────────────────────────────────────────────┘
 ```
-
----
-
-## 🔐 ÉTAPE 2 : Configurer les Secrets
-
-**Chemin** : Settings → Secrets and variables → Actions → **Secrets** tab → New repository secret
-
-### Secret à créer
-
-| Nom | Valeur | Description |
-|-----|--------|-------------|
-| `SERVER_SSH_KEY` | Clé privée complète | Clé SSH pour connexion serveur |
-
-### Comment obtenir la clé SSH
-
-```bash
-# 1. Générer la clé SSH
-ssh-keygen -t ed25519 -C "github-deploy-snoroc" -f ~/.ssh/snoroc_deploy
-
-# 2. Copier la clé PUBLIQUE sur le serveur
-ssh-copy-id -i ~/.ssh/snoroc_deploy.pub ubuntu@VOTRE_IP
-
-# 3. Afficher la clé PRIVÉE (à copier dans GitHub)
-cat ~/.ssh/snoroc_deploy
-```
-
-### Format de la clé
-
-```
------BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACBK...
-...plusieurs lignes...
------END OPENSSH PRIVATE KEY-----
-```
-
-> ⚠️ **IMPORTANT** : Copiez la clé **PRIVÉE** (sans `.pub`), pas la clé publique !
 
 ---
 
@@ -84,7 +47,8 @@ QyNTUxOQAAACBK...
 - [ ] `SERVER_USER` ajouté dans Variables
 - [ ] `SERVER_PORT` ajouté dans Variables
 - [ ] `DEPLOY_TEMP_DIR` ajouté dans Variables
-- [ ] `SERVER_SSH_KEY` ajouté dans Secrets
+- [ ] `SERVER_SSH_KEY` ajouté dans Variables
+- [ ] `SITE_URL` ajouté dans Variables
 - [ ] Clé SSH publique installée sur le serveur
 - [ ] Test de connexion SSH réussi
 
@@ -104,32 +68,21 @@ ssh -i ~/.ssh/snoroc_deploy ubuntu@VOTRE_IP
 Le workflow utilise automatiquement ces variables :
 
 ```yaml
-# Variables (non-sensibles)
+# Toutes les variables
 host: ${{ vars.SERVER_HOST }}
 username: ${{ vars.SERVER_USER }}
+key: ${{ vars.SERVER_SSH_KEY }}
 port: ${{ vars.SERVER_PORT }}
-
-# Secrets (sensibles)
-key: ${{ secrets.SERVER_SSH_KEY }}
 ```
 
 ---
 
 ## 🔄 Modifier une variable
 
-### Pour les Variables (non-sensibles)
-
 1. Settings → Secrets and variables → Actions → Variables
 2. Cliquer sur la variable à modifier
 3. Changer la valeur
 4. Save
-
-### Pour les Secrets (sensibles)
-
-1. Settings → Secrets and variables → Actions → Secrets
-2. Cliquer sur le secret à modifier
-3. Entrer la nouvelle valeur
-4. Update secret
 
 ---
 
@@ -137,7 +90,7 @@ key: ${{ secrets.SERVER_SSH_KEY }}
 
 ### Erreur "Variable not found"
 
-→ Vérifiez que vous avez bien créé la variable dans l'onglet **Variables** (pas Secrets)
+→ Vérifiez que vous avez bien créé la variable dans l'onglet **Variables** de l'environnement `snoroc-nginx`
 
 ### Erreur "Permission denied (publickey)"
 

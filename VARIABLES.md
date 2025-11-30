@@ -16,26 +16,10 @@ Ces variables sont **NON-SENSIBLES** et peuvent être vues dans les logs.
 | `SERVER_USER` | Utilisateur SSH | `ubuntu` |
 | `SERVER_PORT` | Port SSH | `22` |
 | `DEPLOY_TEMP_DIR` | Répertoire temporaire pour le déploiement | `/tmp/nginx-deploy` |
-
-> 💡 **Comment ajouter** : Settings → Secrets and variables → Actions → Variables → New repository variable
-
----
-
-## 🔐 GITHUB SECRETS (à configurer manuellement)
-
-**Où** : Settings → Secrets and variables → Actions → **Secrets** tab
-
-Ces variables sont **SENSIBLES** et ne sont jamais affichées dans les logs.
-
-| Secret | Description | Exemple |
-|--------|-------------|---------|
 | `SERVER_SSH_KEY` | Clé privée SSH complète | `-----BEGIN OPENSSH...` |
+| `SITE_URL` | URL du site pour health check | `dev.snoroc.fr` |
 
-> 🔒 **Comment ajouter** : Settings → Secrets and variables → Actions → Secrets → New repository secret
-
-> 📖 **Guide complet** : [SECRETS_QUICK_REF.md](file:///Users/alex/Desktop/dev/snoroc/snoroc_nginx/SECRETS_QUICK_REF.md)
-
-> 💡 **Modifier ces variables** : Éditez directement `.github/workflows/deploy.yml`
+> 💡 **Comment ajouter** : Settings → Secrets and variables → Actions → Variables → New repository variable (environnement `snoroc-nginx`)
 
 ---
 
@@ -100,17 +84,18 @@ Ces chemins sont spécifiques à votre serveur et ne doivent **PAS** être mis e
 
 ### Avant le premier déploiement
 
-- [ ] Configurer `SERVER_HOST` dans GitHub Secrets
-- [ ] Configurer `SERVER_USER` dans GitHub Secrets
-- [ ] Générer et configurer `SERVER_SSH_KEY` dans GitHub Secrets
+- [ ] Configurer `SERVER_HOST` dans GitHub Variables
+- [ ] Configurer `SERVER_USER` dans GitHub Variables
+- [ ] Configurer `SERVER_PORT` dans GitHub Variables
+- [ ] Configurer `DEPLOY_TEMP_DIR` dans GitHub Variables
+- [ ] Générer et configurer `SERVER_SSH_KEY` dans GitHub Variables
+- [ ] Configurer `SITE_URL` dans GitHub Variables
 - [ ] Vérifier que les chemins dans `nginx/sites/snoroc-dev.conf` correspondent à votre serveur
 - [ ] Vérifier que les variables d'environnement dans `deploy.yml` correspondent à votre structure
 
 ### Pour modifier la configuration
 
-**Secrets sensibles** → GitHub Settings  
-**Chemins Nginx** → Modifier `.github/workflows/deploy.yml`  
-**Chemins serveur** → Modifier `nginx/sites/snoroc-dev.conf`
+**Variables** → GitHub Settings → Secrets and variables → Actions → Variables (environnement `snoroc-nginx`)
 
 ---
 

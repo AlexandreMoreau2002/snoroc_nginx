@@ -37,27 +37,18 @@ snoroc_nginx/
 
 ### Configuration GitHub
 
-**Résumé rapide** : Configurez ces variables dans **Settings → Secrets and variables → Actions** :
+**Résumé rapide** : Configurez ces variables dans **Settings → Secrets and variables → Actions → Variables** (environnement `snoroc-nginx`) :
 
-#### Variables (onglet Variables)
 | Variable | Valeur |
 |----------|--------|
-| `SERVER_HOST` | IP de votre serveur (ex: `51.178.40.123`) |
+| `SERVER_HOST` | IP de votre serveur (ex: `51.210.77.73`) |
 | `SERVER_USER` | Utilisateur SSH (ex: `ubuntu`) |
 | `SERVER_PORT` | Port SSH (ex: `22`) |
 | `DEPLOY_TEMP_DIR` | Répertoire temporaire (ex: `/tmp/nginx-deploy`) |
-
-#### Secrets (onglet Secrets)
-| Secret | Valeur |
-|--------|--------|
 | `SERVER_SSH_KEY` | Clé privée SSH complète |
+| `SITE_URL` | URL du site (ex: `dev.snoroc.fr`) |
 
-## 🛠️ Déploiement manuel
-
-Si vous voulez déployer manuellement :
-
-```bash
-# 1. Cloner le repo sur le serveur
+> 💡 Le fichier [CONFIGURATION.md](file:///Users/alex/Desktop/dev/snoroc/snoroc_nginx/CONFIGURATION.md) contient les instructions détaillées. serveur
 git clone <repo-url> /tmp/snoroc_nginx
 cd /tmp/snoroc_nginx
 

@@ -50,14 +50,19 @@ ubuntu
 
 ---
 
-## 🔐 GITHUB SECRETS (sensibles)
+### 5️⃣ SITE_URL
+**Nom de la variable** : `SITE_URL`  
+**Valeur** : URL du site pour le health check
 
-Voici ce que vous devez mettre dans **Settings → Secrets and variables → Actions → Secrets** :
+**Exemple** :
+```
+dev.snoroc.fr
+```
 
 ---
 
-### 🔑 SERVER_SSH_KEY
-**Nom du secret** : `SERVER_SSH_KEY`  
+### 6️⃣ SERVER_SSH_KEY
+**Nom de la variable** : `SERVER_SSH_KEY`  
 **Valeur** : La clé privée SSH COMPLÈTE (générée avec `ssh-keygen`)
 
 **Comment l'obtenir** :
@@ -125,11 +130,14 @@ SERVER_PORT             2 minutes ago    [Update] [Remove]
 - [ ] Générer la paire de clés SSH (`ssh-keygen`)
 - [ ] Installer la clé publique sur le serveur (`ssh-copy-id`)
 - [ ] Tester la connexion SSH avec la nouvelle clé
-- [ ] Ajouter `SERVER_HOST` dans GitHub Secrets
-- [ ] Ajouter `SERVER_USER` dans GitHub Secrets
-- [ ] Ajouter `SERVER_SSH_KEY` dans GitHub Secrets
-- [ ] (Optionnel) Ajouter `SERVER_PORT` dans GitHub Secrets
-- [ ] Tester le workflow en faisant un push sur `main`
+- [ ] Ajouter `SERVER_HOST` dans GitHub Variables
+- [ ] Ajouter `SERVER_USER` dans GitHub Variables
+- [ ] Ajouter `SERVER_PORT` dans GitHub Variables
+- [ ] Ajouter `DEPLOY_TEMP_DIR` dans GitHub Variables
+- [ ] Ajouter `SERVER_SSH_KEY` dans GitHub Variables
+- [ ] Ajouter `SITE_URL` dans GitHub Variables
+- [ ] Clé SSH publique installée sur le serveur
+- [ ] Test de connexion SSH réussih sur `main`
 
 ---
 
@@ -138,24 +146,43 @@ SERVER_PORT             2 minutes ago    [Update] [Remove]
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  GitHub Repository Settings                                 │
-│  → Secrets and variables → Actions → New repository secret │
+│  → Secrets and variables → Actions → Variables             │
+│  → Environnement: snoroc-nginx                              │
 └─────────────────────────────────────────────────────────────┘
                             │
                             ▼
         ┌───────────────────────────────────────┐
-        │  Secret 1: SERVER_HOST                │
-        │  Value: 51.178.x.x                    │
+        │  Variable 1: SERVER_HOST              │
+        │  Value: 51.210.77.73                  │
         └───────────────────────────────────────┘
                             │
                             ▼
         ┌───────────────────────────────────────┐
-        │  Secret 2: SERVER_USER                │
+        │  Variable 2: SERVER_USER              │
         │  Value: ubuntu                        │
         └───────────────────────────────────────┘
                             │
                             ▼
         ┌───────────────────────────────────────┐
-        │  Secret 3: SERVER_SSH_KEY             │
+        │  Variable 3: SERVER_PORT              │
+        │  Value: 22                            │
+        └───────────────────────────────────────┘
+                            │
+                            ▼
+        ┌───────────────────────────────────────┐
+        │  Variable 4: DEPLOY_TEMP_DIR          │
+        │  Value: /tmp/nginx-deploy             │
+        └───────────────────────────────────────┘
+                            │
+                            ▼
+        ┌───────────────────────────────────────┐
+        │  Variable 5: SITE_URL                 │
+        │  Value: dev.snoroc.fr                 │
+        └───────────────────────────────────────┘
+                            │
+                            ▼
+        ┌───────────────────────────────────────┐
+        │  Variable 6: SERVER_SSH_KEY           │
         │  Value: -----BEGIN OPENSSH...         │
         │         ...                           │
         │         -----END OPENSSH...           │
@@ -163,7 +190,7 @@ SERVER_PORT             2 minutes ago    [Update] [Remove]
                             │
                             ▼
         ┌───────────────────────────────────────┐
-        │  ✅ Secrets configurés !               │
+        │  ✅ Variables configurées !            │
         │  → Push sur main pour déployer        │
         └───────────────────────────────────────┘
 ```
