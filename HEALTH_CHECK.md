@@ -1,6 +1,6 @@
 # 🏥 Health Check - Validation du déploiement
 
-## 🎯 Pourquoi c'est essentiel
+## 🎯 Pourquoi
 
 Une configuration Nginx **syntaxiquement valide** ne garantit **PAS** un site fonctionnel !
 
@@ -65,79 +65,18 @@ Si détecté → **Échec du déploiement**
 
 ---
 
-## 🚀 Aller plus loin (optionnel)
-
-### Option 1 : Endpoint backend dédié
-
-Créer un endpoint `/health` dans Express :
-
-```javascript
-// Dans ton backend Express
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', timestamp: Date.now() });
-});
-```
-
-Puis dans le workflow :
-
-```yaml
-- name: Health Check Backend
-  run: |
-    curl -f https://dev.snoroc.fr/api/health
-```
-
-### Option 2 : Rollback automatique
-
-Si le health check échoue, restaurer automatiquement le backup :
-
-```yaml
-- name: Rollback on failure
-  if: failure()
-  uses: appleboy/ssh-action@v1.0.3
-  with:
-    host: ${{ vars.SERVER_HOST }}
-    username: ${{ vars.SERVER_USER }}
-    key: ${{ vars.SERVER_SSH_KEY }}
-    port: ${{ vars.SERVER_PORT }}
-    script: |
-      LATEST_BACKUP=$(ls -t /etc/nginx/backup/ | head -1)
-      sudo cp -r /etc/nginx/backup/$LATEST_BACKUP/* /etc/nginx/sites-available/
-      sudo nginx -t && sudo systemctl reload nginx
-```
-
-### Option 3 : Notifications Slack/Discord
-
-Envoyer une notification en cas d'échec :
-
-```yaml
-- name: Notify on failure
-  if: failure()
-  run: |
-    curl -X POST ${{ secrets.SLACK_WEBHOOK }} \
-      -H 'Content-Type: application/json' \
-      -d '{"text":"❌ Déploiement Nginx échoué sur dev.snoroc.fr"}'
-```
-
----
-
 ## 📋 Checklist
 
 - [ ] Ajouter `SITE_URL` dans les variables GitHub
 - [ ] Tester le déploiement avec le health check
 - [ ] Vérifier les logs dans GitHub Actions
-- [ ] (Optionnel) Créer un endpoint `/health` dans le backend
-- [ ] (Optionnel) Ajouter le rollback automatique
 
 ---
 
 ## 🎯 Résultat
-
-Avec le Health Check, ton pipeline est **production-ready** et conforme aux standards de l'industrie :
 
 ✅ Validation syntaxe  
 ✅ Déploiement sécurisé  
 ✅ Vérification fonctionnelle  
 ✅ Détection automatique des erreurs  
 ✅ Zéro downtime non détecté  
-
-**Tu ne déploieras plus jamais une page d'erreur sans le savoir !** 🚀

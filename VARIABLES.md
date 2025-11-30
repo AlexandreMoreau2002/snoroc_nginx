@@ -1,14 +1,8 @@
-# 📊 Variables du projet - Vue d'ensemble
+# 📊 Variables du projet
 
-Ce document liste TOUTES les variables utilisées dans le projet pour une meilleure lisibilité.
-
----
-
-## 📊 GITHUB VARIABLES (à configurer manuellement)
+## 📊 GITHUB VARIABLES
 
 **Où** : Settings → Secrets and variables → Actions → **Variables** tab
-
-Ces variables sont **NON-SENSIBLES** et peuvent être vues dans les logs.
 
 | Variable | Description | Exemple |
 |----------|-------------|---------|
@@ -18,8 +12,6 @@ Ces variables sont **NON-SENSIBLES** et peuvent être vues dans les logs.
 | `DEPLOY_TEMP_DIR` | Répertoire temporaire pour le déploiement | `/tmp/nginx-deploy` |
 | `SERVER_SSH_KEY` | Clé privée SSH complète | `-----BEGIN OPENSSH...` |
 | `SITE_URL` | URL du site pour health check | `dev.snoroc.fr` |
-
-> 💡 **Comment ajouter** : Settings → Secrets and variables → Actions → Variables → New repository variable (environnement `snoroc-nginx`)
 
 ---
 
@@ -36,7 +28,7 @@ Ces chemins sont spécifiques à votre serveur et ne doivent **PAS** être mis e
 | `/srv/snoroc-dev/snoroc_front/build` | Build frontend React |
 | `http://127.0.0.1:3030/` | Backend API Express |
 
-> ⚠️ **Important** : Ces chemins restent en dur car ils sont spécifiques à votre infrastructure serveur.
+> ⚠️ **Important** : Ces chemins restent en dur car ils sont spécifiques à l'infrastructure serveur.
 
 ---
 

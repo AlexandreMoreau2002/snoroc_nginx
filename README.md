@@ -4,7 +4,7 @@ Infrastructure-as-Code pour la configuration Nginx de Snoroc.
 
 ## 🎯 Objectif
 
-Gérer la configuration Nginx de manière versionnée, testable et déployable automatiquement via GitOps.
+Gérer la configuration Nginx de manière versionnée, testable et déployable automatiquement via Git.
 
 ## 📁 Structure
 
@@ -32,8 +32,8 @@ snoroc_nginx/
 
 1. **Push sur `main`** → déclenche le workflow GitHub Actions
 2. **Validation** → teste la syntaxe Nginx
-3. **Déploiement** → copie les fichiers sur le serveur via SSH
-4. **Reload** → recharge Nginx sans downtime
+3. **Déploiement** → copie les fichiers sur le serveur via SSH et recharge Nginx
+4. **Health check** → vérifie que le site est accessible
 
 ### Configuration GitHub
 
