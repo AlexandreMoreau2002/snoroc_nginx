@@ -47,21 +47,21 @@ jobs:
 
           # Minimal nginx.conf to validate sites + rate limits
           cat <<'EOF' | sudo tee /tmp/nginx.conf >/dev/null
-user www-data;
-worker_processes auto;
-pid /run/nginx.pid;
+          user www-data;
+          worker_processes auto;
+          pid /run/nginx.pid;
 
-events {
-    worker_connections 1024;
-}
+          events {
+              worker_connections 1024;
+          }
 
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-    include /etc/nginx/snippets/rate-limit.conf;
-    include /etc/nginx/sites-enabled/*;
-}
-EOF
+          http {
+              include /etc/nginx/mime.types;
+              default_type application/octet-stream;
+              include /etc/nginx/snippets/rate-limit.conf;
+              include /etc/nginx/sites-enabled/*;
+          }
+          EOF
 
       - name: Validate Nginx syntax
         run: sudo nginx -t -c /tmp/nginx.conf
@@ -99,7 +99,6 @@ EOF
             chmod +x scripts/deploy.sh
             sudo ./scripts/deploy.sh
             
-            # Cleanup
             cd /
             rm -rf ${{ vars.DEPLOY_TEMP_DIR }}
 
