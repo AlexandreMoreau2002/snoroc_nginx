@@ -20,6 +20,9 @@
 | `SERVER_USER` | `ubuntu` | Utilisateur SSH |
 | `SERVER_PORT` | `22` | Port SSH |
 | `DEPLOY_TEMP_DIR` | `/tmp/nginx-deploy` | Répertoire temporaire |
+| `SERVER_SSH_KEY` | `<ssh_key>` | Clé privée SSH complète |
+| `SITE_URL` | `snoroc.fr` | Domaine PROD (health check) |
+| `SITE_URL_DEV` | `dev.snoroc.fr` | Domaine DEV (health check non bloquant) |
 
 ### Exemple de configuration
 
@@ -34,6 +37,8 @@
 │  SERVER_PORT             22                                 │
 │  DEPLOY_TEMP_DIR         /tmp/nginx-deploy                  │
 │  SERVER_SSH_KEY          <ssh_key>                          │
+│  SITE_URL                snoroc.fr                          │
+│  SITE_URL_DEV            dev.snoroc.fr                      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -49,6 +54,8 @@
 - [ ] `DEPLOY_TEMP_DIR` ajouté dans Variables
 - [ ] `SERVER_SSH_KEY` ajouté dans Variables
 - [ ] `SITE_URL` ajouté dans Variables
+- [ ] `SITE_URL_DEV` ajouté dans Variables
+- [ ] Port backend PROD aligné sur `127.0.0.1:13030` (service en écoute)
 - [ ] Clé SSH publique installée sur le serveur
 - [ ] Test de connexion SSH réussi
 

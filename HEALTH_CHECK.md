@@ -18,34 +18,24 @@ Une configuration Nginx **syntaxiquement valide** ne garantit **PAS** un site fo
 
 ## ✅ Ce que le Health Check vérifie
 
-### 1. Code HTTP = 200
-```bash
-curl -o /dev/null -s -w "%{http_code}" https://dev.snoroc.fr
-```
+- **DEV (`dev.snoroc.fr`)** : HTTP 200 + contenu sans page d'erreur. **Non bloquant** (le job continue mais un warning est affiché).
+- **PROD (`snoroc.fr`)** : HTTP 200 + contenu sans page d'erreur. **Bloquant** (échec du job si KO).
 
-Si ≠ 200 → **Échec du déploiement**
-
-### 2. Contenu de la page
-
-Détecte les patterns d'erreur :
+Patterns détectés dans la page :
 - `nginx error`
 - `Bad Gateway` (502)
-- `Welcome to nginx` (page par défaut)
+- `Welcome to nginx`
 - `403 Forbidden`
 - `404 Not Found`
-
-Si détecté → **Échec du déploiement**
 
 ---
 
 ## 🔧 Configuration
 
-### Variable à ajouter dans GitHub
+Variables à ajouter dans GitHub (`snoroc-nginx` environment) :
 
-**Nom** : `SITE_URL`  
-**Valeur** : `dev.snoroc.fr`
-
-**Où** : Settings → Secrets and variables → Actions → Variables (environnement `snoroc-nginx`)
+- `SITE_URL` : domaine PROD (ex : `snoroc.fr`)
+- `SITE_URL_DEV` : domaine DEV (ex : `dev.snoroc.fr`)
 
 ---
 
@@ -53,14 +43,14 @@ Si détecté → **Échec du déploiement**
 
 ```
 1. Checkout code
-2. Validation syntaxe (nginx -t)
+2. Validation syntaxe réelle (nginx -t dans un bac à sable avec certifs auto-signés)
 3. Déploiement via SCP
-4. Reload Nginx
-5. Vérification Nginx status
-6. Health Check ← NOUVEAU !
+4. Reload Nginx (graceful)
+5. Vérification Nginx status + nginx -t sur le serveur
+6. Health Check
    ├─ Attente 5s (stabilisation)
-   ├─ Test HTTP 200
-   └─ Vérification contenu
+   ├─ Test DEV (non bloquant)
+   └─ Test PROD (bloquant)
 ```
 
 ---
@@ -68,6 +58,7 @@ Si détecté → **Échec du déploiement**
 ## 📋 Checklist
 
 - [ ] Ajouter `SITE_URL` dans les variables GitHub
+- [ ] Ajouter `SITE_URL_DEV` dans les variables GitHub
 - [ ] Tester le déploiement avec le health check
 - [ ] Vérifier les logs dans GitHub Actions
 

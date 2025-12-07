@@ -1,168 +1,72 @@
 # Snoroc Nginx Configuration
 
-Infrastructure-as-Code pour la configuration Nginx de Snoroc.
+Infrastructure-as-Code pour les reverse proxies Snoroc. Deux environnements isolés :
 
-## 🎯 Objectif
+- **PROD** `snoroc.fr` / `www.snoroc.fr`
+- **DEV** `dev.snoroc.fr`
 
-Gérer la configuration Nginx de manière versionnée, testable et déployable automatiquement via Git.
+## Environnements et chemins
 
-## 📁 Structure
+| Environnement | Fichier Nginx (repo → serveur) | Frontend (root) | Uploads (alias) | Backend (upstream) | Certificats |
+|---------------|---------------------------------|-----------------|-----------------|--------------------|-------------|
+| PROD | `nginx/sites/snoroc.conf` → `/etc/nginx/sites-available/snoroc.conf` | `/srv/snoroc/snoroc_front/build` | `/srv/snoroc/snoroc_back/public/uploads/` | `127.0.0.1:13030` | `/etc/letsencrypt/live/snoroc.fr/` |
+| DEV | `nginx/sites/snoroc-dev.conf` → `/etc/nginx/sites-available/snoroc-dev.conf` | `/srv/snoroc-dev/snoroc_front/build` | `/srv/snoroc-dev/snoroc_back/public/uploads/` | `127.0.0.1:3030` | `/etc/letsencrypt/live/dev.snoroc.fr/` |
 
-```
-snoroc_nginx/
-├── nginx/
-│   ├── sites/              # Configurations des sites
-│   │   └── snoroc-dev.conf
-│   └── snippets/           # Configurations réutilisables
-│       ├── security.conf   # Headers de sécurité
-│       ├── gzip.conf       # Compression
-│       ├── proxy.conf      # Configuration proxy
-│       └── cors.conf       # CORS pour API
-├── scripts/
-│   ├── deploy.sh           # Script de déploiement
-│   └── test.sh             # Validation syntaxe
-└── .github/
-    └── workflows/
-        └── deploy.yml      # CI/CD automatique
-```
+Chaque fichier ne référence que ses propres domaines, ports et chemins pour éviter tout mélange entre DEV et PROD.
 
-## 🚀 Déploiement automatique
+## Ce que font les deux fichiers Nginx
 
-### Workflow
+- **snoroc.conf (PROD)** : redirection HTTP→HTTPS + www→non-www, certificats Let's Encrypt `snoroc.fr`, proxy `/api/` vers le backend PROD (127.0.0.1:13030), alias `/uploads/` vers `/srv/snoroc/snoroc_back/public/uploads/`, frontend React servi depuis `/srv/snoroc/snoroc_front/build`, rate limiting + headers de sécurité depuis `nginx/snippets`.
+- **snoroc-dev.conf (DEV)** : HTTPS sur `dev.snoroc.fr`, proxy `/api/` vers le backend DEV, alias `/uploads/` vers `/srv/snoroc-dev/snoroc_back/public/uploads/`, frontend React servi depuis `/srv/snoroc-dev/snoroc_front/build`, mêmes protections/snippets mais chemins distincts.
 
-1. **Push sur `main`** → déclenche le workflow GitHub Actions
-2. **Validation** → teste la syntaxe Nginx
-3. **Déploiement** → copie les dossiers `nginx/` et `scripts/` sur le serveur via SSH et recharge Nginx (tous les sites sont donc mis à jour en même temps)
-4. **Health check** → vérifie que le site est accessible
+## CI/CD GitHub Actions (`.github/workflows/deploy.yml`)
 
-### Configuration GitHub
+1. **Validate**  
+   - `scripts/test.sh` (sanity check).  
+   - Installe Nginx, injecte les configs/snippets dans un bac à sable, génère des certificats auto-signés et lance `nginx -t` avec un `nginx.conf` minimal (incluant `rate-limit.conf`). Cela valide vraiment la syntaxe des deux sites.
+2. **Deploy**  
+   - SCP du dossier `nginx/` et `scripts/` vers `$DEPLOY_TEMP_DIR`.  
+   - `scripts/deploy.sh` côté serveur : sauvegarde `/etc/nginx/sites-available` et `/etc/nginx/snippets`, refuse tout mélange de chemins PROD/DEV, copie séparément `snoroc.conf` et `snoroc-dev.conf`, crée les symlinks dans `sites-enabled`, vérifie que `rate-limit.conf` est inclus dans `nginx.conf`, puis `nginx -t` + reload.
+3. **Health check**  
+   - DEV est vérifié mais **non bloquant** (échec signalé en warning).  
+   - PROD est **bloquant** : HTTP 200 et contenu sans page d'erreur sinon le job échoue.
 
-**Résumé rapide** : Configurez ces variables dans **Settings → Secrets and variables → Actions → Variables** (environnement `snoroc-nginx`) :
+## Variables GitHub à définir (env `snoroc-nginx`)
 
-| Variable | Valeur |
-|----------|--------|
-| `SERVER_HOST` | IP de votre serveur (ex: `51.210.77.73`) |
-| `SERVER_USER` | Utilisateur SSH (ex: `ubuntu`) |
-| `SERVER_PORT` | Port SSH (ex: `22`) |
-| `DEPLOY_TEMP_DIR` | Répertoire temporaire (ex: `/tmp/nginx-deploy`) |
-| `SERVER_SSH_KEY` | Clé privée SSH complète |
-| `SITE_URL` | URL du site (ex: `dev.snoroc.fr`) |
+| Variable | Rôle |
+|----------|------|
+| `SERVER_HOST` | IP / hostname du serveur |
+| `SERVER_USER` | Utilisateur SSH |
+| `SERVER_PORT` | Port SSH |
+| `SERVER_SSH_KEY` | Clé privée SSH |
+| `DEPLOY_TEMP_DIR` | Répertoire temporaire sur le serveur |
+| `SITE_URL` | Domaine PROD (ex : `snoroc.fr`) |
+| `SITE_URL_DEV` | Domaine DEV (ex : `dev.snoroc.fr`) |
 
-> 💡 Le fichier [CONFIGURATION.md](file:///Users/alex/Desktop/dev/snoroc/snoroc_nginx/CONFIGURATION.md) contient les instructions détaillées. serveur
-git clone <repo-url> /tmp/snoroc_nginx
-cd /tmp/snoroc_nginx
+## Déploiement manuel (si besoin)
 
-# 2. Exécuter le script de déploiement
+```bash
+git checkout main
 chmod +x scripts/deploy.sh
 sudo ./scripts/deploy.sh
 ```
 
-## 🧪 Tester localement
+## Redémarrer / recharger Nginx proprement
 
 ```bash
-# Validation basique
-chmod +x scripts/test.sh
-./scripts/test.sh
-```
-
-## 🔄 Rollback
-
-En cas de problème après déploiement :
-
-### Option 1 : Git revert (recommandé)
-
-```bash
-# Identifier le commit problématique
-git log --oneline
-
-# Revert le commit
-git revert <commit-hash>
-git push origin main
-# → Le CI/CD redéploiera automatiquement la version précédente
-```
-
-### Option 2 : Restauration manuelle sur le serveur
-
-```bash
-# Les backups sont dans /etc/nginx/backup/
-ls -la /etc/nginx/backup/
-
-# Restaurer un backup
-sudo cp -r /etc/nginx/backup/YYYYMMDD_HHMMSS/* /etc/nginx/sites-available/
 sudo nginx -t
-sudo systemctl reload nginx
+sudo systemctl reload nginx   # reload sans coupure
+# ou sudo systemctl restart nginx si nécessaire
 ```
 
-## 📝 Ajouter un nouveau site
+## Vérifications post-déploiement
 
-1. Créer un fichier dans `nginx/sites/` :
-   ```bash
-   cp nginx/sites/snoroc-dev.conf nginx/sites/snoroc-prod.conf
-   ```
+- Accès : `curl -I https://snoroc.fr`, `curl -I https://dev.snoroc.fr`
+- Logs : `/var/log/nginx/snoroc.access.log`, `/var/log/nginx/snoroc.error.log`, `/var/log/nginx/snoroc-dev.*`
+- Certificats : `sudo ls /etc/letsencrypt/live/snoroc.fr` et `/etc/letsencrypt/live/dev.snoroc.fr`
 
-2. Modifier la configuration selon vos besoins
+## Points d'attention
 
-3. Commit et push :
-   ```bash
-   git add nginx/sites/snoroc-prod.conf
-   git commit -m "Add production site configuration"
-   git push origin main
-   ```
-
-4. Le déploiement se fait automatiquement ! 🎉
-
-## 🔒 Sécurité
-
-- ✅ Aucune clé SSH n'est committée dans le repo
-- ✅ Les certificats SSL restent sur le serveur
-- ✅ Validation syntaxe avant déploiement
-- ✅ Backup automatique avant chaque déploiement
-- ✅ Reload graceful (pas de downtime)
-
-## 📊 Monitoring
-
-Vérifier les logs après déploiement :
-
-```bash
-# Logs d'accès
-sudo tail -f /var/log/nginx/snoroc-dev.access.log
-
-# Logs d'erreur
-sudo tail -f /var/log/nginx/snoroc-dev.error.log
-
-# Status Nginx
-sudo systemctl status nginx
-```
-
-## 🎯 Bonnes pratiques
-
-1. **Ne jamais éditer directement sur le serveur** → toujours passer par Git
-2. **Tester en local** avant de push
-3. **Commits atomiques** : une modification = un commit
-4. **Messages de commit clairs** : `feat: add rate limiting` plutôt que `update config`
-5. **Utiliser les snippets** pour éviter la duplication
-
-## 🆘 Troubleshooting
-
-### Le déploiement échoue avec "Permission denied"
-
-→ Vérifiez que la clé SSH est correctement configurée et que l'utilisateur a les droits sudo
-
-### Nginx ne reload pas
-
-```bash
-# Sur le serveur, vérifier la syntaxe
-sudo nginx -t
-
-# Voir les erreurs détaillées
-sudo journalctl -u nginx -n 50
-```
-
-### Le workflow GitHub Actions ne se déclenche pas
-
-→ Vérifiez que vous avez bien push sur la branche `main` (pas `master`)
-
----
-
-**Maintenu par** : Alex  
-**Dernière mise à jour** : 2025-11-30
+- Port backend PROD configuré à `127.0.0.1:13030` (à garder cohérent avec le service backend).
+- Ne jamais mélanger les chemins `/srv/snoroc/...` et `/srv/snoroc-dev/...` : les garde-fous du script bloquent le déploiement si c'est le cas.
+- Les certificats Let's Encrypt doivent correspondre exactement aux domaines utilisés dans chaque fichier.

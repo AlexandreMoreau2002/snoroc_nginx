@@ -1,99 +1,35 @@
-# 📊 Variables du projet
+# 📊 Variables et chemins
 
-## 📊 GITHUB VARIABLES
-
-**Où** : Settings → Secrets and variables → Actions → **Variables** tab
+## Variables GitHub (environnement `snoroc-nginx`)
 
 | Variable | Description | Exemple |
 |----------|-------------|---------|
 | `SERVER_HOST` | IP ou hostname du serveur | `51.178.40.123` |
 | `SERVER_USER` | Utilisateur SSH | `ubuntu` |
 | `SERVER_PORT` | Port SSH | `22` |
-| `DEPLOY_TEMP_DIR` | Répertoire temporaire pour le déploiement | `/tmp/nginx-deploy` |
 | `SERVER_SSH_KEY` | Clé privée SSH complète | `-----BEGIN OPENSSH...` |
-| `SITE_URL` | URL du site pour health check | `dev.snoroc.fr` |
+| `DEPLOY_TEMP_DIR` | Répertoire temporaire pour le déploiement | `/tmp/nginx-deploy` |
+| `SITE_URL` | Domaine PROD pour le health check | `snoroc.fr` |
+| `SITE_URL_DEV` | Domaine DEV pour le health check | `dev.snoroc.fr` |
 
----
+## Chemins en dur dans les configs
 
-## 📁 CHEMINS HARDCODÉS (dans la config Nginx)
+Ces valeurs sont dans `nginx/sites/*.conf` et doivent correspondre à votre serveur (pas de variables ici).
 
-**Où** : `nginx/sites/snoroc-dev.conf`
+| Environnement | Frontend | Uploads | Backend | Certificats |
+|---------------|----------|---------|---------|-------------|
+| PROD | `/srv/snoroc/snoroc_front/build` | `/srv/snoroc/snoroc_back/public/uploads/` | `http://127.0.0.1:13030` | `/etc/letsencrypt/live/snoroc.fr/` |
+| DEV | `/srv/snoroc-dev/snoroc_front/build` | `/srv/snoroc-dev/snoroc_back/public/uploads/` | `http://127.0.0.1:3030` | `/etc/letsencrypt/live/dev.snoroc.fr/` |
 
-Ces chemins sont spécifiques à votre serveur et ne doivent **PAS** être mis en variables.
+## Checklist avant déploiement
 
-| Chemin | Description |
-|--------|-------------|
-| `/etc/letsencrypt/live/dev.snoroc.fr/` | Certificats SSL Let's Encrypt |
-| `/srv/snoroc-dev/snoroc_back/public/uploads/` | Uploads backend |
-| `/srv/snoroc-dev/snoroc_front/build` | Build frontend React |
-| `http://127.0.0.1:3030/` | Backend API Express |
+- [ ] Variables GitHub ci-dessus renseignées
+- [ ] Ports backend confirmés (PROD `13030`, DEV `3030` par défaut)
+- [ ] Certificats Let's Encrypt présents pour chaque domaine
+- [ ] Chemins `/srv/snoroc/...` et `/srv/snoroc-dev/...` existent sur le serveur
 
-> ⚠️ **Important** : Ces chemins restent en dur car ils sont spécifiques à l'infrastructure serveur.
+## Références
 
----
-
-## 🎯 Résumé : Que mettre où ?
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  SECRETS GITHUB (sensibles)                                 │
-│  → À configurer dans l'interface GitHub                    │
-│  → Ne JAMAIS committer dans Git                            │
-├─────────────────────────────────────────────────────────────┤
-│  • SERVER_HOST                                              │
-│  • SERVER_USER                                              │
-│  • SERVER_SSH_KEY                                           │
-│  • SERVER_PORT (optionnel)                                  │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│  VARIABLES D'ENVIRONNEMENT (workflow)                       │
-│  → Définies dans .github/workflows/deploy.yml               │
-│  → Versionnées dans Git                                     │
-├─────────────────────────────────────────────────────────────┤
-│  • DEPLOY_TEMP_DIR                                          │
-│  • NGINX_CONFIG_DIR                                         │
-│  • NGINX_SITES_DIR                                          │
-│  • NGINX_SNIPPETS_DIR                                       │
-│  • NGINX_ENABLED_DIR                                        │
-│  • BACKUP_DIR                                               │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│  CHEMINS SERVEUR (hardcodés)                                │
-│  → Dans nginx/sites/snoroc-dev.conf                         │
-│  → Spécifiques à votre infrastructure                       │
-├─────────────────────────────────────────────────────────────┤
-│  • Certificats SSL                                          │
-│  • Chemins applicatifs (/srv/snoroc-dev/...)               │
-│  • Ports backend (3030)                                     │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## ✅ Checklist de configuration
-
-### Avant le premier déploiement
-
-- [ ] Configurer `SERVER_HOST` dans GitHub Variables
-- [ ] Configurer `SERVER_USER` dans GitHub Variables
-- [ ] Configurer `SERVER_PORT` dans GitHub Variables
-- [ ] Configurer `DEPLOY_TEMP_DIR` dans GitHub Variables
-- [ ] Générer et configurer `SERVER_SSH_KEY` dans GitHub Variables
-- [ ] Configurer `SITE_URL` dans GitHub Variables
-- [ ] Vérifier que les chemins dans `nginx/sites/snoroc-dev.conf` correspondent à votre serveur
-- [ ] Vérifier que les variables d'environnement dans `deploy.yml` correspondent à votre structure
-
-### Pour modifier la configuration
-
-**Variables** → GitHub Settings → Secrets and variables → Actions → Variables (environnement `snoroc-nginx`)
-
----
-
-## 📚 Documentation
-
-- [SECRETS_QUICK_REF.md](file:///Users/alex/Desktop/dev/snoroc/snoroc_nginx/SECRETS_QUICK_REF.md) - Guide rapide des secrets
-- [SECRETS.md](file:///Users/alex/Desktop/dev/snoroc/snoroc_nginx/SECRETS.md) - Guide détaillé SSH
-- [.env.example](file:///Users/alex/Desktop/dev/snoroc/snoroc_nginx/.env.example) - Template des variables
-- [README.md](file:///Users/alex/Desktop/dev/snoroc/snoroc_nginx/README.md) - Documentation générale
+- `.env.example` : template rapide pour les variables GitHub
+- `README.md` : fonctionnement CI/CD et séparation DEV/PROD
+- `HEALTH_CHECK.md` : logique de vérification post-déploiement

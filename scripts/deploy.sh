@@ -7,6 +7,28 @@ if [ ! -d "nginx/sites" ] || [ ! -d "nginx/snippets" ]; then
     exit 1
 fi
 
+PROD_CONF_SOURCE="nginx/sites/snoroc.conf"
+DEV_CONF_SOURCE="nginx/sites/snoroc-dev.conf"
+PROD_CONF_TARGET="/etc/nginx/sites-available/snoroc.conf"
+DEV_CONF_TARGET="/etc/nginx/sites-available/snoroc-dev.conf"
+
+# Safety rails: ensure we do not mix DEV/PROD paths
+echo "🧪 Safety checks..."
+if ! [ -f "$PROD_CONF_SOURCE" ] || ! [ -f "$DEV_CONF_SOURCE" ]; then
+    echo "❌ Missing site configuration files in nginx/sites/"
+    exit 1
+fi
+
+if grep -q "/srv/snoroc-dev" "$PROD_CONF_SOURCE"; then
+    echo "❌ PROD configuration references DEV paths (/srv/snoroc-dev)."
+    exit 1
+fi
+
+if grep -q "/srv/snoroc/" "$DEV_CONF_SOURCE"; then
+    echo "❌ DEV configuration references PROD paths (/srv/snoroc/)."
+    exit 1
+fi
+
 # Backup current configuration
 echo "📦 Creating backup of current configuration..."
 BACKUP_DIR="/etc/nginx/backup/$(date +%Y%m%d_%H%M%S)"
@@ -19,11 +41,10 @@ echo "📝 Copying snippets..."
 sudo mkdir -p /etc/nginx/snippets
 sudo cp -r nginx/snippets/* /etc/nginx/snippets/
 
-# Remove legacy site configs without .conf extension
 echo "🧹 Cleaning legacy site definitions..."
 for legacy in /etc/nginx/sites-available/snoroc /etc/nginx/sites-available/snoroc-dev; do
     if [ -f "$legacy" ]; then
-        echo "  → Removing legacy file $legacy"
+        echo "  → Removing legacy file $legacy (backed up in $BACKUP_DIR)"
         sudo rm -f "$legacy"
     fi
 done
@@ -37,7 +58,8 @@ done
 # Copy site configurations
 echo "📝 Copying site configurations..."
 sudo mkdir -p /etc/nginx/sites-available
-sudo cp -r nginx/sites/* /etc/nginx/sites-available/
+sudo cp "$PROD_CONF_SOURCE" "$PROD_CONF_TARGET"
+sudo cp "$DEV_CONF_SOURCE" "$DEV_CONF_TARGET"
 
 # Configure nginx.conf if needed
 echo "🔧 Configuring nginx.conf for rate limiting..."
@@ -58,11 +80,10 @@ fi
 # Create symlinks in sites-enabled
 echo "🔗 Creating symlinks..."
 sudo mkdir -p /etc/nginx/sites-enabled
-for conf in nginx/sites/*.conf; do
-    CONF_NAME=$(basename "$conf")
-    sudo ln -sf "/etc/nginx/sites-available/$CONF_NAME" "/etc/nginx/sites-enabled/$CONF_NAME"
-    echo "  → Linked $CONF_NAME"
-done
+sudo ln -sf "$PROD_CONF_TARGET" "/etc/nginx/sites-enabled/$(basename "$PROD_CONF_TARGET")"
+echo "  → Linked $(basename "$PROD_CONF_TARGET")"
+sudo ln -sf "$DEV_CONF_TARGET" "/etc/nginx/sites-enabled/$(basename "$DEV_CONF_TARGET")"
+echo "  → Linked $(basename "$DEV_CONF_TARGET")"
 
 # Remove broken symlinks
 sudo find /etc/nginx/sites-enabled -xtype l -delete

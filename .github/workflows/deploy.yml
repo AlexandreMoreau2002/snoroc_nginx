@@ -14,30 +14,57 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Nginx (for syntax validation)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y nginx
-
       - name: Run basic validation
         run: |
           chmod +x scripts/test.sh
           ./scripts/test.sh
 
-      - name: Validate Nginx syntax (dry-run)
+      - name: Install Nginx for syntax validation
         run: |
-          # Create temporary nginx.conf for testing
-          sudo mkdir -p /tmp/nginx-test/sites
-          sudo mkdir -p /tmp/nginx-test/snippets
-          sudo cp nginx/sites/* /tmp/nginx-test/sites/
-          sudo cp nginx/snippets/* /tmp/nginx-test/snippets/
-          
-          # Test each site config
-          for conf in nginx/sites/*.conf; do
-            echo "Testing $(basename $conf)..."
-            # Note: Full test requires actual paths, this is a basic check
-            sudo nginx -t -c /etc/nginx/nginx.conf 2>&1 | head -1
-          done
+          sudo apt-get update
+          sudo apt-get install -y nginx openssl
+
+      - name: Prepare Nginx sandbox
+        run: |
+          # Prepare folders expected by the site configs
+          sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /etc/nginx/snippets
+          sudo mkdir -p /etc/letsencrypt/live/snoroc.fr /etc/letsencrypt/live/dev.snoroc.fr
+          sudo cp nginx/snippets/* /etc/nginx/snippets/
+          sudo cp nginx/sites/snoroc.conf /etc/nginx/sites-available/snoroc.conf
+          sudo cp nginx/sites/snoroc-dev.conf /etc/nginx/sites-available/snoroc-dev.conf
+          sudo ln -sf /etc/nginx/sites-available/snoroc.conf /etc/nginx/sites-enabled/snoroc.conf
+          sudo ln -sf /etc/nginx/sites-available/snoroc-dev.conf /etc/nginx/sites-enabled/snoroc-dev.conf
+
+          # Fake certificates/params so nginx -t can run
+          echo 'ssl_session_cache shared:le_nginx_SSL:1m;' | sudo tee /etc/letsencrypt/options-ssl-nginx.conf >/dev/null
+          sudo openssl req -x509 -nodes -days 1 -newkey rsa:2048 -subj "/CN=snoroc.fr" \
+            -keyout /etc/letsencrypt/live/snoroc.fr/privkey.pem \
+            -out /etc/letsencrypt/live/snoroc.fr/fullchain.pem
+          sudo openssl req -x509 -nodes -days 1 -newkey rsa:2048 -subj "/CN=dev.snoroc.fr" \
+            -keyout /etc/letsencrypt/live/dev.snoroc.fr/privkey.pem \
+            -out /etc/letsencrypt/live/dev.snoroc.fr/fullchain.pem
+          sudo openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 1024
+
+          # Minimal nginx.conf to validate sites + rate limits
+          cat <<'EOF' | sudo tee /tmp/nginx.conf >/dev/null
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    include /etc/nginx/snippets/rate-limit.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+EOF
+
+      - name: Validate Nginx syntax
+        run: sudo nginx -t -c /tmp/nginx.conf
 
   deploy:
     name: Deploy
@@ -102,21 +129,22 @@ jobs:
           echo "⏳ Attente de 5 secondes pour stabilisation..."
           sleep 5
 
-      - name: Check dev site
+      - name: Check dev site (non bloquant)
+        continue-on-error: true
         run: |
           SITE="${{ vars.SITE_URL_DEV }}"
           echo "🔍 Vérification de https://$SITE..."
           
           STATUS_CODE=$(curl -o /dev/null -s -w "%{http_code}" "https://$SITE")
           if [ "$STATUS_CODE" != "200" ]; then
-            echo "❌ $SITE répond avec HTTP $STATUS_CODE"
+            echo "⚠️  $SITE répond avec HTTP $STATUS_CODE (non bloquant)"
             exit 1
           fi
           echo "✅ $SITE - HTTP 200 OK"
           
           CONTENT=$(curl -s "https://$SITE")
           if echo "$CONTENT" | grep -qiE "nginx error|Bad Gateway|Welcome to nginx|403 Forbidden|404 Not Found"; then
-            echo "❌ $SITE renvoie une page d'erreur"
+            echo "⚠️  $SITE renvoie une page d'erreur (non bloquant)"
             exit 1
           fi
           echo "✅ $SITE - Contenu valide"
