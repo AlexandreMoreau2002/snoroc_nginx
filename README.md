@@ -32,7 +32,7 @@ snoroc_nginx/
 
 1. **Push sur `main`** → déclenche le workflow GitHub Actions
 2. **Validation** → teste la syntaxe Nginx
-3. **Déploiement** → copie les fichiers sur le serveur via SSH et recharge Nginx
+3. **Déploiement** → copie les dossiers `nginx/` et `scripts/` sur le serveur via SSH et recharge Nginx (tous les sites sont donc mis à jour en même temps)
 4. **Health check** → vérifie que le site est accessible
 
 ### Configuration GitHub

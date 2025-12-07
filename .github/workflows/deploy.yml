@@ -56,7 +56,7 @@ jobs:
           username: ${{ vars.SERVER_USER }}
           key: ${{ vars.SERVER_SSH_KEY }}
           port: ${{ vars.SERVER_PORT }}
-          source: "nginx/sites/*,nginx/snippets/*,scripts/deploy.sh"
+          source: "nginx,scripts"
           target: ${{ vars.DEPLOY_TEMP_DIR }}
           strip_components: 0
 
@@ -145,4 +145,3 @@ jobs:
           echo "🎉 Déploiement validé avec succès !"
           echo "✅ DEV: https://${{ vars.SITE_URL_DEV }}"
           echo "✅ PROD: https://${{ vars.SITE_URL }}"
-

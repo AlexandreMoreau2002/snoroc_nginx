@@ -1,4 +1,11 @@
+set -euo pipefail
+
 echo "🚀 Deployment Nginx Snoroc starting..."
+
+if [ ! -d "nginx/sites" ] || [ ! -d "nginx/snippets" ]; then
+    echo "❌ Missing nginx configuration directories (nginx/sites or nginx/snippets)."
+    exit 1
+fi
 
 # Backup current configuration
 echo "📦 Creating backup of current configuration..."
