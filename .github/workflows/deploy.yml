@@ -43,7 +43,7 @@ jobs:
           sudo openssl req -x509 -nodes -days 1 -newkey rsa:2048 -subj "/CN=dev.snoroc.fr" \
             -keyout /etc/letsencrypt/live/dev.snoroc.fr/privkey.pem \
             -out /etc/letsencrypt/live/dev.snoroc.fr/fullchain.pem
-          sudo openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 1024
+          sudo openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048
 
           # Minimal nginx.conf to validate sites + rate limits
           cat <<'EOF' | sudo tee /tmp/nginx.conf >/dev/null
