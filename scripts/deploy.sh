@@ -19,6 +19,21 @@ echo "📝 Copying snippets..."
 sudo mkdir -p /etc/nginx/snippets
 sudo cp -r nginx/snippets/* /etc/nginx/snippets/
 
+# Remove legacy site configs without .conf extension
+echo "🧹 Cleaning legacy site definitions..."
+for legacy in /etc/nginx/sites-available/snoroc /etc/nginx/sites-available/snoroc-dev; do
+    if [ -f "$legacy" ]; then
+        echo "  → Removing legacy file $legacy"
+        sudo rm -f "$legacy"
+    fi
+done
+for legacy_link in /etc/nginx/sites-enabled/snoroc /etc/nginx/sites-enabled/snoroc-dev; do
+    if [ -L "$legacy_link" ] || [ -f "$legacy_link" ]; then
+        echo "  → Removing legacy symlink $legacy_link"
+        sudo rm -f "$legacy_link"
+    fi
+done
+
 # Copy site configurations
 echo "📝 Copying site configurations..."
 sudo mkdir -p /etc/nginx/sites-available
@@ -48,6 +63,9 @@ for conf in nginx/sites/*.conf; do
     sudo ln -sf "/etc/nginx/sites-available/$CONF_NAME" "/etc/nginx/sites-enabled/$CONF_NAME"
     echo "  → Linked $CONF_NAME"
 done
+
+# Remove broken symlinks
+sudo find /etc/nginx/sites-enabled -xtype l -delete
 
 # Test configuration
 echo "🧪 Testing Nginx configuration..."
