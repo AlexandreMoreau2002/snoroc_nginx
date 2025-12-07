@@ -60,6 +60,8 @@ echo "📝 Copying site configurations..."
 sudo mkdir -p /etc/nginx/sites-available
 sudo cp "$PROD_CONF_SOURCE" "$PROD_CONF_TARGET"
 sudo cp "$DEV_CONF_SOURCE" "$DEV_CONF_TARGET"
+echo "📂 Current /etc/nginx/sites-available:"
+sudo ls -l /etc/nginx/sites-available | grep snoroc || true
 
 # Configure nginx.conf if needed
 echo "🔧 Configuring nginx.conf for rate limiting..."
@@ -84,9 +86,21 @@ sudo ln -sf "$PROD_CONF_TARGET" "/etc/nginx/sites-enabled/$(basename "$PROD_CONF
 echo "  → Linked $(basename "$PROD_CONF_TARGET")"
 sudo ln -sf "$DEV_CONF_TARGET" "/etc/nginx/sites-enabled/$(basename "$DEV_CONF_TARGET")"
 echo "  → Linked $(basename "$DEV_CONF_TARGET")"
+echo "📂 Current /etc/nginx/sites-enabled:"
+sudo ls -l /etc/nginx/sites-enabled | grep snoroc || true
 
 # Remove broken symlinks
 sudo find /etc/nginx/sites-enabled -xtype l -delete
+
+# Sanity: ensure both configs exist before testing
+if ! [ -f "$PROD_CONF_TARGET" ]; then
+    echo "❌ Missing $PROD_CONF_TARGET after copy."
+    exit 1
+fi
+if ! [ -f "$DEV_CONF_TARGET" ]; then
+    echo "❌ Missing $DEV_CONF_TARGET after copy."
+    exit 1
+fi
 
 # Test configuration
 echo "🧪 Testing Nginx configuration..."
